@@ -16,13 +16,17 @@ const MACOS_BROWSER_PATHS = [
   "/Applications/Chromium.app/Contents/MacOS/Chromium",
 ];
 
-// Linux binary names (searched on PATH)
+// Browser binary names searched on PATH across platforms.
 // Prefer Chrome first: on some setups Google Search is less likely to challenge headless Chrome than headless Brave.
-const LINUX_BROWSER_NAMES = [
+const PATH_BROWSER_NAMES = [
   "google-chrome",
   "google-chrome-stable",
+  "chrome",
   "brave",
   "brave-browser",
+  "msedge",
+  "microsoft-edge",
+  "microsoft-edge-stable",
   "chromium",
   "chromium-browser",
 ];
@@ -90,7 +94,8 @@ function findExecutableOnPath(name, env = process.env) {
  *  - preferredBin (CLI)
  *  - WEB_SEARCH_BROWSER_BIN
  *  - WEB_BROWSE_BROWSER_BIN or BRAVE_BIN (backwards compatibility)
- *  - OS-specific defaults (macOS .app bundles, Windows paths, or Linux PATH names)
+ *  - browser names on PATH
+ *  - OS-specific default installation paths
  */
 export function resolveBrowserBin(preferredBin = null, env = process.env) {
   // Priority overrides (env vars, CLI arg)
@@ -107,6 +112,11 @@ export function resolveBrowserBin(preferredBin = null, env = process.env) {
     if (resolved) return resolved;
   }
 
+  for (const cand of PATH_BROWSER_NAMES) {
+    const resolved = findExecutableOnPath(cand, env);
+    if (resolved) return resolved;
+  }
+
   // OS-specific browser paths
   let osCandidates;
   let osName;
@@ -117,7 +127,7 @@ export function resolveBrowserBin(preferredBin = null, env = process.env) {
     osCandidates = WINDOWS_BROWSER_PATHS;
     osName = "Windows";
   } else {
-    osCandidates = LINUX_BROWSER_NAMES;
+    osCandidates = [];
     osName = "Linux";
   }
 
@@ -128,7 +138,7 @@ export function resolveBrowserBin(preferredBin = null, env = process.env) {
     if (resolved) return resolved;
   }
 
-  const allTried = [...overrides, ...osCandidates.filter(Boolean)];
+  const allTried = [...overrides, ...PATH_BROWSER_NAMES, ...osCandidates.filter(Boolean)];
   throw new Error(
     `No supported browser binary found on ${osName}. ` +
       "Set WEB_SEARCH_BROWSER_BIN or pass --browser-bin <path>. " +
