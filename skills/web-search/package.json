@@ -1,0 +1,54 @@
+{
+  "name": "web-search",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local browser daemon for search-engine queries and readable Markdown page extraction.",
+  "type": "module",
+  "main": "web-search.js",
+  "bin": {
+    "web-search": "web-search.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "daemon:status": "node web-search.js --daemon status",
+    "daemon:start": "node web-search.js --daemon start",
+    "daemon:stop": "node web-search.js --daemon stop",
+    "daemon:restart": "node web-search.js --daemon restart"
+  },
+  "keywords": [
+    "agent-skill",
+    "web-search",
+    "web-scraping",
+    "browser-automation",
+    "cdp",
+    "headless-browser",
+    "playwright"
+  ],
+  "author": "Can Celik",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ogulcancelik/agent-skills.git",
+    "directory": "skills/web-search"
+  },
+  "bugs": {
+    "url": "https://github.com/ogulcancelik/agent-skills/issues"
+  },
+  "homepage": "https://github.com/ogulcancelik/agent-skills/tree/main/skills/web-search#readme",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "cheerio": "^1.1.2",
+    "jsdom": "^27.4.0",
+    "playwright": "^1.53.2",
+    "turndown": "^7.2.2",
+    "undici": "^7.18.0"
+  }
+}
