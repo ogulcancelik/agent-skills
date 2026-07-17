@@ -2,8 +2,6 @@
 
 Small, opinionated, agent-agnostic skills for coding agents.
 
-[![skills.sh](https://skills.sh/b/ogulcancelik/agent-skills)](https://skills.sh/ogulcancelik/agent-skills)
-
 ## Skills
 
 ### `web-search`
