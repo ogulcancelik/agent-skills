@@ -12,6 +12,8 @@ Give agents free local web search through your browser. A persistent local brows
 
 Run an explicit, proportional risk-and-evidence workflow around meaningful implementation work. It challenges scope before coding and verifies the resulting change against a locked contract.
 
+> **Note:** `preflight` is still experimental. I'm still exploring the right shape for the workflow, so it may change significantly.
+
 ## Install
 
 Install the collection:
