@@ -1,6 +1,5 @@
-import { Readability } from "@mozilla/readability";
+import { Defuddle } from "defuddle/node";
 import { JSDOM, VirtualConsole } from "jsdom";
-import TurndownService from "turndown";
 
 const jsdomVirtualConsole = new VirtualConsole();
 jsdomVirtualConsole.on("jsdomError", (err) => {
@@ -8,7 +7,7 @@ jsdomVirtualConsole.on("jsdomError", (err) => {
   if (message.includes("Could not parse CSS stylesheet")) return;
 });
 
-export function parseHtmlToContent(html, url, truncate = true) {
+export async function parseHtmlToContent(html, url, truncate = true) {
   let dom;
   try {
     dom = new JSDOM(html, { url, virtualConsole: jsdomVirtualConsole });
@@ -16,43 +15,24 @@ export function parseHtmlToContent(html, url, truncate = true) {
     dom = new JSDOM(html, { url, runScripts: "outside-only", virtualConsole: jsdomVirtualConsole });
   }
 
-  const document = dom.window.document;
-
-  let article = null;
   try {
-    const reader = new Readability(document.cloneNode(true));
-    article = reader.parse();
-  } catch {
-    // Readability failed
-  }
+    const result = await Defuddle(dom.window.document, url, {
+      markdown: true,
+      useAsync: false,
+    });
+    let content = result.content.trim();
 
-  const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
-  let content = "";
-
-  try {
-    if (article?.content) {
-      content = turndown.turndown(article.content);
-    } else {
-      const body = document.querySelector("body");
-      if (body) content = turndown.turndown(body.innerHTML);
+    if (truncate && content.length > 2000) {
+      const cutPoint = content.lastIndexOf("\n\n", 2000);
+      const end = cutPoint > 1000 ? cutPoint : 2000;
+      content = content.slice(0, end) + "\n\n[... truncated, use --full for complete content ...]";
     }
-  } catch {
-    content = article?.textContent || document.body?.textContent || "";
+
+    return {
+      title: result.title || dom.window.document.title || "",
+      content,
+    };
+  } finally {
+    dom.window.close();
   }
-
-  let finalContent = content.trim();
-
-  if (truncate && finalContent.length > 2000) {
-    const cutPoint = finalContent.lastIndexOf("\n\n", 2000);
-    if (cutPoint > 1000) {
-      finalContent = finalContent.slice(0, cutPoint) + "\n\n[... truncated, use --full for complete content ...]";
-    } else {
-      finalContent = finalContent.slice(0, 2000) + "\n\n[... truncated, use --full for complete content ...]";
-    }
-  }
-
-  return {
-    title: article?.title || document.title || "",
-    content: finalContent,
-  };
 }

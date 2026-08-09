@@ -25,7 +25,7 @@ export async function fetchUrlViaHttp(httpFetch, headers, url, truncate = true) 
     }
 
     const html = await response.text();
-    const parsed = parseHtmlToContent(html, url, truncate);
+    const parsed = await parseHtmlToContent(html, url, truncate);
 
     return {
       url,

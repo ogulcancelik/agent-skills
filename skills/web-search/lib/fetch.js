@@ -21,7 +21,7 @@ export async function fetchUrlFromContext(
     await waitForBotProtectionToClear(page, url, { timeoutMs: botProtectionTimeoutMs });
 
     const html = await page.content();
-    const parsed = parseHtmlToContent(html, url, truncate);
+    const parsed = await parseHtmlToContent(html, url, truncate);
 
     return { url, title: parsed.title, content: parsed.content, error: null };
   } catch (err) {
