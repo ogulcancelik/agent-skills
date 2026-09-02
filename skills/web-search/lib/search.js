@@ -187,6 +187,56 @@ export async function searchDuckDuckGo(httpFetch, headers, query, num) {
   return results;
 }
 
+function isGoogleHostname(hostname) {
+  const normalized = String(hostname || "").toLowerCase().replace(/\.$/, "");
+  return /(^|\.)google\.[a-z]{2,}(\.[a-z]{2})?$/.test(normalized);
+}
+
+function getExternalHttpUrl(candidate, baseUrl) {
+  if (!candidate) return null;
+
+  try {
+    const url = new URL(candidate, baseUrl);
+    if (!["http:", "https:"].includes(url.protocol) || isGoogleHostname(url.hostname)) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveGoogleResultLink(context, link, baseUrl = "https://www.google.com") {
+  let url;
+
+  try {
+    url = new URL(link, baseUrl);
+  } catch {
+    return null;
+  }
+
+  if (url.pathname === "/url") {
+    const target = url.searchParams.get("q") || url.searchParams.get("url");
+    return getExternalHttpUrl(target, url);
+  }
+
+  const directUrl = getExternalHttpUrl(url.href, baseUrl);
+  if (directUrl) return directUrl;
+
+  if (!isGoogleHostname(url.hostname) || url.pathname !== "/goto") return null;
+
+  try {
+    const response = await context.request.get(url.href, {
+      failOnStatusCode: false,
+      maxRedirects: 0,
+      timeout: 10000,
+    });
+    return getExternalHttpUrl(response.headers().location, url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    diag(`Google: failed to resolve redirect ${url.pathname}: ${message}`);
+    return null;
+  }
+}
+
 export async function searchGoogleFromContext(context, query, num) {
   const clampedNum = Math.max(1, Math.min(num, 20));
   const startMs = Date.now();
@@ -218,18 +268,6 @@ export async function searchGoogleFromContext(context, query, num) {
 
         if (!title || !link) continue;
 
-        let finalLink = link;
-        if (link.startsWith("/url?")) {
-          try {
-            const url = new URL(`https://www.google.com${link}`);
-            finalLink = url.searchParams.get("q") || link;
-          } catch {
-            finalLink = link;
-          }
-        }
-
-        if (finalLink.startsWith("/") || finalLink.includes("google.com")) continue;
-
         let snippet = "";
         const container =
           linkEl.closest("div.MjjYud, div.g, div[data-snf], div[data-sncf]") || linkEl.parentElement?.parentElement;
@@ -246,21 +284,30 @@ export async function searchGoogleFromContext(context, query, num) {
           }
         }
 
-        items.push({ title, link: finalLink, snippet });
+        items.push({ title, link, snippet });
       }
 
       return items;
     };
 
-    const results = [];
+    const extractedResults = [];
     for (const frame of page.frames()) {
       try {
         const frameResults = await frame.evaluate(extractResultsFromDocument);
-        results.push(...frameResults);
+        extractedResults.push(...frameResults);
       } catch {
         // ignore
       }
     }
+
+    const results = (
+      await Promise.all(
+        extractedResults.map(async (result) => {
+          const link = await resolveGoogleResultLink(context, result.link, page.url());
+          return link ? { ...result, link } : null;
+        }),
+      )
+    ).filter(Boolean);
 
     if (results.length === 0) {
       diag(`Google: zero extractable results at ${Date.now() - startMs}ms`);
