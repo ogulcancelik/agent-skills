@@ -54,8 +54,9 @@ Use this prompt:
 
 > Find concrete regressions this requested change could cause. For each finding,
 > cite the existing behavior, exact code path, evidence, and causal failure
-> chain. Do not suggest implementation designs, general improvements, defensive
-> hardening, or hypothetical risks without evidence. Report unknowns separately.
+> chain. Do not suggest implementation designs, tests, mitigations, general
+> improvements, defensive hardening, or hypothetical risks without evidence.
+> Report unknowns separately.
 
 The child returns only concrete risks, blocking unknowns, or no findings.
 
@@ -72,6 +73,12 @@ Required risks enter the contract. Watches enter the review checklist but create
 no code, abstraction, branch, or test. Discarded findings disappear. Investigate
 a blocking unknown instead of guessing.
 
+For localized bug fixes, default to one required behavior and one regression
+test. Promote a risk to required only when it is reproduced, lies on a supported
+normal path that the patch changes, or the patch necessarily creates the
+failure. Unchanged control flow, unlikely interleavings, recovery mechanics,
+and merely reachable edge cases stay watches unless they meet that bar.
+
 ## 3. Present the contract
 
 Give the user one short, plain-language brief:
@@ -80,7 +87,9 @@ Give the user one short, plain-language brief:
 
 **Contract:** required observable behavior.
 
-**Protected behavior:** existing behavior that must not regress.
+**Protected behavior:** existing behavior directly exposed by the changed path.
+Do not include unchanged execution-order details or implementation recovery
+mechanics merely to force dedicated proof.
 
 **Non-goals:** adjacent work that will not be implemented.
 
@@ -105,10 +114,13 @@ Prefer the least new state, control flow, API surface, and test machinery. Every
 new mechanism must prevent a distinct required failure. If a mechanism creates
 recovery branches or more tests, first try removing it.
 
-Capture fail-before and pass-after evidence when practical. Add tests for
-required behavior or distinct regression boundaries, not speculative paths or
-implementation details. Reuse existing harnesses. Run targeted checks, then
-repository-required checks.
+Capture fail-before and pass-after evidence when practical. For a localized bug,
+start with one regression test. Add another only when the first cannot prove a
+distinct required behavior. Do not create one test per contract sentence.
+Unchanged paths may be protected by code inspection and the existing suite. Add
+tests for required behavior or distinct regression boundaries, not speculative
+paths or implementation details. Reuse existing harnesses. Run targeted checks,
+then repository-required checks.
 
 ## 5. Verify with specialists
 
@@ -116,8 +128,10 @@ Give post-implementation specialists the raw request, approved brief, diff,
 evidence, and check results. Keep the jobs separate.
 
 **Contract verifier:** Check that the patch and evidence satisfy the approved
-contract. Report only missing, contradictory, or unreliable proof. Do not ask
-for redesign or hardening.
+contract. Report only missing, contradictory, or unreliable proof for changed
+or newly required behavior. Do not demand one focused test per contract item;
+accept direct code-path evidence and existing broad checks for unchanged
+behavior. Do not ask for redesign, hardening, or new requirements.
 
 **Regression reviewer:** Find regressions introduced by the patch. Every blocker
 must cite severity, exact code path, existing behavior at risk, and a causal
